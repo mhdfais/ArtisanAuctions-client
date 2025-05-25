@@ -1,9 +1,9 @@
 import { AxiosInstance } from "axios";
 import store from "../redux/store/store";
 import { logout } from "../redux/store/authSlice";
-import useToast from "../hooks/useToast";
+// import useToast from "../hooks/useToast";
 
-const {error}=useToast()
+// const {error}=useToast()
 
 export const applyInterceptors = (
   api: AxiosInstance,
@@ -29,12 +29,12 @@ export const applyInterceptors = (
           // on error what to do
           store.dispatch(logout())
           window.location.href = "/login";
-          error('Error','Please login again...')
+          // error('Error','Please login again...')
 
         }
       }
 
-      return Promise.reject(error);
+      return Promise.reject(err);
     }
   );
 };

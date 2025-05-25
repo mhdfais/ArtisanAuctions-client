@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { api } from "@/config/auth.axios";
+import ProfileTab from "@/components/user/ProfileTab";
 import useToast from "@/hooks/useToast";
 import { getUserDetails } from "@/services/userService";
 import { useEffect, useState } from "react";
@@ -16,31 +16,11 @@ interface userDetail {
 }
 
 export default function Profile() {
-  const [user, setUser] = useState<userDetail | null>(null);
-  const [userDetailLoading, setUserDetailLoading] = useState(false);
-  const { success, error } = useToast();
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      setUserDetailLoading(true);
-      try {
-        const userDetails = await getUserDetails();
-        console.log(userDetails.data.user);
-        setUser(userDetails.data.user);
-      } catch (err) {
-        setUserDetailLoading(false);
-        error("Error", "Failed to fetch user details");
-      } finally {
-        setUserDetailLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
+ 
   // console.log(userDetailLoading?'Loading...':user?.name);
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4 md:mb-6">
+      <h1 className="font-serif text-3xl md:text-4xl mb-4 md:mb-6">
         My Profile
       </h1>
 
@@ -50,30 +30,32 @@ export default function Profile() {
             <TabsList className="bg-gray-100 p-0 h-12 w-full md:w-auto">
               <TabsTrigger
                 value="profile"
-                className="rounded-none data-[state=active]:bg-white data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
+                className="text-[#2E2E2E] rounded-none data-[state=active]:bg-[#D6A85F] data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
               >
                 Profile
               </TabsTrigger>
               <TabsTrigger
                 value="seller-dashboard"
-                className="rounded-none data-[state=active]:bg-white data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
+                className="text-[#2E2E2E] rounded-none data-[state=active]:bg-[#D6A85F] data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
               >
                 Seller Dashboard
               </TabsTrigger>
               <TabsTrigger
                 value="bids"
-                className="rounded-none data-[state=active]:bg-white data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
+                className="text-[#2E2E2E] rounded-none data-[state=active]:bg-[#D6A85F] data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
               >
                 Bids
               </TabsTrigger>
               <TabsTrigger
                 value="wallet"
-                className="rounded-none data-[state=active]:bg-white data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
+                className="text-[#2E2E2E] rounded-none data-[state=active]:bg-[#D6A85F] data-[state=active]:shadow-none h-12 px-4 md:px-6 flex-1 md:flex-none"
               >
                 Wallet
               </TabsTrigger>
             </TabsList>
           </div>
+
+          <ProfileTab />
 
           <TabsContent value="seller-dashboard">
             <Card>
@@ -158,55 +140,7 @@ export default function Profile() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="profile">
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Profile Settings</h2>
-                <p className="text-gray-600 mb-6">
-                  Update your personal information and preferences.
-                </p>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                      defaultValue={userDetailLoading?'Loading...':user?.name}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Bio
-                    </label>
-                    <textarea
-                      className="w-full p-2 border rounded-md"
-                      rows={4}
-                      defaultValue={userDetailLoading?'Loading...':user?.bio}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      className="w-full p-2 border rounded-md"
-                      defaultValue={userDetailLoading?'Loading...':user?.email}
-                      disabled
-                    />
-                  </div>
-                  <div className="pt-4">
-                    <button className="bg-gray-800 text-white px-4 py-2 rounded-md">
-                      Save Changes
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          
 
           <TabsContent value="bids">
             <Card>

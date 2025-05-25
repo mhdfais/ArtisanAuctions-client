@@ -16,7 +16,12 @@ function App() {
     <>
       <Toaster position="top-right" />
       <Router>
+        {/* Landing page */}
         <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+          </Route>
+
           {/* Public Routes */}
           <Route
             path="/login"
@@ -54,14 +59,6 @@ function App() {
           {/* Protected Routes */}
           <Route element={<Layout />}>
             <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/profile"
               element={
                 <ProtectedRoute>
@@ -70,7 +67,7 @@ function App() {
               }
             />
           </Route>
-          <Route path="*" element={<NotFound />}/>
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </>

@@ -1,15 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ErrorMessage, Field, Form, Formik } from "formik";
-import {
-  loginInitialValues,
-  loginSchema,
-} from "../utils/validations/loginValidator";
-import { LoginFormData } from "../types/Types";
-import { loginUser } from "../services/authService";
+import { loginInitialValues,loginSchema, } from "@/utils/validations/loginValidator";
+import { LoginFormData } from "@/types/Types";
+import { loginUser } from "@/services/authService";
 import { useDispatch } from "react-redux";
-import { setUser } from "../redux/store/authSlice";
-import useToast from "../hooks/useToast";
+import { setUser } from "@/redux/store/authSlice";
+import useToast from "@/hooks/useToast";
 
 const LoginForm = () => {
   const dispatch = useDispatch();

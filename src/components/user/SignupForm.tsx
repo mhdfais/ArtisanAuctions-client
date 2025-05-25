@@ -1,15 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Formik, Form, ErrorMessage, Field, FormikHelpers } from "formik";
-import useToast from "../hooks/useToast";
+import useToast from "@/hooks/useToast";
 import { useRef, useState } from "react";
-import OtpModal from "./modals/otpModal";
-import {
-  signupInitialValues,
-  signupSchema,
-} from "../utils/validations/signupValidator";
-import { RegisterData, SignupFormValues } from "../types/Types";
-import { registerUser, sentOtp, verifyOtp } from "../services/authService";
+import OtpModal from "../modals/otpModal";
+import { signupInitialValues,signupSchema } from "@/utils/validations/signupValidator";
+import { RegisterData, SignupFormValues } from "@/types/Types";
+import { registerUser,sentOtp, verifyOtp } from "@/services/authService";
 
 const SignupForm = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -20,3 +20,18 @@ export interface LoginFormData{
   email:string
   password:string
 }
+
+export interface UserProfile {
+  name: string;
+  phone: string;
+  bio: string;
+  profileImage: string | File | null;
+  email: string;
+}
+
+export interface IUserProfileUpdate {
+  name: string;
+  bio: string;
+  phone: string;
+  profileImage?: File | string;
+}
