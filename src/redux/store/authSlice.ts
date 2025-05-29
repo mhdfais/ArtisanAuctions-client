@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-interface AuthState {
-  isLoggedIn: boolean
-  user: any | null;
-}
+  interface AuthState {
+    isLoggedIn: boolean
+    user: any | null;
+  }
 
 const initialState: AuthState = {
   isLoggedIn: false,

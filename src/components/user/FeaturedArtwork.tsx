@@ -1,50 +1,41 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-
-interface FeaturedArtworkProps {
-  imageUrl: string;
-  title: string;
-  artist: string;
-  currentBid: string;
-  timeRemaining: string;
-}
 
 const FeaturedArtwork: React.FC = () => {
   return (
-    <div className="relative w-full h-[70vh] overflow-hidden animate-fade-in">
+    <section className="relative h-[70vh] bg-gradient-to-r from-[#2E2E2E] to-[#4A4A4A] overflow-hidden">
+      <div className="absolute inset-0 bg-black/40"></div>
       <div 
-        className="absolute inset-0 bg-cover bg-center" 
-        style={{ backgroundImage: `url(${`https://images.unsplash.com/photo-1625043094370-221909f669f5?q=80&w=2095&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D`})` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-charcoal/70 to-transparent" />
+        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 hover:scale-105"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1200&h=800&fit=crop')"
+        }}
+      ></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div>
       
-      <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 text-ivory">
-        <div className="max-w-3xl">
-          <h1 className="font-serif text-4xl md:text-6xl font-bold mb-3">{}</h1>
-          <p className="text-5xl mb-2 font-bold text-[#2E2E2E]">Art That Speaks To Your Soul</p>
-          {/* Art That Speaks To Your Soul */}
-          {/* Unlock a world of imagination with our curated collection of original artworks. From bold abstracts to serene landscapes, discover pieces that inspire, captivate. */}
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-12 mb-8">
-            <div>
-              {/* <p className="text-sm uppercase tracking-wider mb-1">Current Bid</p> */}
-              <p className="text-xl text-[#2E2E2E] font-medium">Unlock a world of imagination with our curated collection of original artworks.</p>
-              <p className="text-xl text-[#2E2E2E] font-medium">From bold abstracts to serene landscapes, discover pieces that inspire, captivate.</p>
+      <div className="relative z-10 h-full flex items-center">
+        <div className="container mx-auto px-6">
+          <div className="max-w-2xl text-white">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+              <h1 className="font-serif text-4xl md:text-6xl font-bold mb-4 animate-fade-in">
+                Discover Extraordinary Art
+              </h1>
+              <div className="w-20 h-1 bg-gradient-to-r from-[#D6A85F] to-[#E8B866] rounded-full mb-6"></div>
+              <p className="text-lg md:text-xl mb-8 opacity-90 animate-fade-in leading-relaxed" style={{ animationDelay: '0.2s' }}>
+                Experience the thrill of live auctions featuring curated masterpieces from emerging and established artists around the world.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                <button className="bg-gradient-to-r from-[#D6A85F] to-[#E8B866] text-white px-8 py-3 rounded-lg hover:from-[#C19A56] hover:to-[#D6A85F] transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  Explore Auctions
+                </button>
+                <button className="border-2 border-white/70 text-white px-8 py-3 rounded-lg hover:bg-white hover:text-[#2E2E2E] transition-all duration-200 font-semibold backdrop-blur-sm">
+                  Learn More
+                </button>
+              </div>
             </div>
-            <div>
-              {/* <p className="text-sm uppercase tracking-wider mb-1">Time Remaining</p> */}
-              {/* <p className="text-2xl font-medium">From bold abstracts to serene landscapes, discover pieces that inspire, captivate.</p> */}
-            </div>
-          </div>
-          
-          <div className=" sm:flex-row gap-4">
-          
-            <Link to="#" className=" bg-white/80 backdrop-blur-md text-center font-medium text-[#2E2E2E] px-6 py-2 rounded-md hover:bg-white/65 transition-all duration-200">
-              Explore All
-            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

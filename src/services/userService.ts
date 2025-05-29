@@ -1,3 +1,4 @@
+import { api } from "@/config/auth.axios";
 import userApi from "@/config/user.axios";
 import { IUserProfileUpdate } from "@/types/Types";
 
@@ -41,8 +42,29 @@ export const updatePassword = async (
       currentPassword,
       newPassword,
     });
-    return response
+    return response;
   } catch (error) {
     throw error || "Failed to update Password";
+  }
+};
+
+export const ApplyForSeller = async (idNumber: string, address: string) => {
+  try {
+    const response = await userApi.post("/users/ApplyForSeller", {
+      idNumber,
+      address,
+    });
+    return response;
+  } catch (error) {
+    throw error || "Failed to apply";
+  }
+};
+
+export const getSellerStatus = async () => {
+  try {
+    const reponse = await userApi.get("/users/getSellerStatus");
+    return reponse;
+  } catch (error) {
+    throw error || "failed to fetch status";
   }
 };

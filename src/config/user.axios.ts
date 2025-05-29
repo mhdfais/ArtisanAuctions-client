@@ -6,6 +6,10 @@ const userApi = axios.create({
   withCredentials: true,
 });
 
+
+
 applyInterceptors(userApi, "user");
+
+
 
 export default userApi;

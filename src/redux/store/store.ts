@@ -4,22 +4,24 @@ import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage"; // defaults to localStorage
 import authReducer from "./authSlice";
 import { combineReducers } from "redux";
+import adminAuthSlice from "./adminAuthSlice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  adminAuth: adminAuthSlice,
 });
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth"], // state slices to persist
+  whitelist: ["auth", "adminAuth"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 const store = configureStore({
   reducer: persistedReducer,
-  middleware: getDefaultMiddleware =>
+  middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false, // required by redux-persist
     }),

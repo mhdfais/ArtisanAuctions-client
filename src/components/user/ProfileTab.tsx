@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
-import { TabsContent } from "../ui/tabs";
-import { Card, CardContent } from "../ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import useToast from "@/hooks/useToast";
 import {
-  getUserDetails,
-  updatePassword,
-  updateProfile,
-} from "@/services/userService";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { useFormik } from "formik";
 import * as yup from "yup";
+import { useState } from "react";
+import useToast from "@/hooks/useToast";
+import { updatePassword, updateProfile } from "@/services/userService";
 
 interface userDetail {
   name: string;
@@ -19,29 +25,16 @@ interface userDetail {
   profileImage: string;
 }
 
-const ProfileTab = () => {
-  const [user, setUser] = useState<userDetail | null>(null);
-  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
-  const [userDetailLoading, setUserDetailLoading] = useState(false);
+interface Props {
+  user: userDetail | null;
+  setUser: React.Dispatch<React.SetStateAction<userDetail | null>>;
+}
+
+const ProfileTab = ({ user, setUser }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { success, error } = useToast();
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      setUserDetailLoading(true);
-      try {
-        const userDetails = await getUserDetails();
-        setUser(userDetails.data.user);
-      } catch (err) {
-        error("Error", "Failed to fetch user details");
-      } finally {
-        setUserDetailLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -76,7 +69,6 @@ const ProfileTab = () => {
         }));
         setIsModalOpen(false);
       } catch (err) {
-        setIsProfileUpdating(false);
         error("Error", "Failed to update profile");
       } finally {
         setIsProfileUpdating(false);
@@ -100,18 +92,13 @@ const ProfileTab = () => {
       confirmPassword: "",
     },
     validationSchema: yup.object({
-      currentPassword: yup
-        .string()
-        .trim()
-        .required("Current password is required"),
+      currentPassword: yup.string().required("Current password is required"),
       newPassword: yup
         .string()
-        .trim()
         .min(6, "Password too short")
         .required("New password is required"),
       confirmPassword: yup
         .string()
-        .trim()
         .oneOf([yup.ref("newPassword")], "Passwords must match")
         .required("Confirm your new password"),
     }),
@@ -122,7 +109,6 @@ const ProfileTab = () => {
         resetForm();
       } catch (err: any) {
         const status = err?.response?.status;
-
         if (status === 401) {
           error("Error", "Current password is incorrect");
         } else if (status === 400) {
@@ -134,232 +120,202 @@ const ProfileTab = () => {
     },
   });
 
+  if (!user) return (
+    <div className="flex justify-center items-center py-12">
+      <Progress value={30} className="w-64" />
+    </div>
+  );
+
   return (
     <>
       <TabsContent value="profile">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="font-serif text-2xl font-medium mb-4">
-              Profile Settings
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Update your personal information and preferences.
-            </p>
+        <Card className="shadow-xl border-[#D6A85F]/20 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-8">
+            <div className="mb-8">
+              <h2 className="font-serif text-3xl font-bold text-gray-800 mb-2">
+                Profile Settings
+              </h2>
+              <div className="w-16 h-1 bg-gradient-to-r from-[#D6A85F] to-[#B8956A] rounded-full"></div>
+            </div>
 
-            <div className="space-y-4">
-              <label className="block text-sm font-medium mb-2">
-                Profile photo
-              </label>
-              <img
-                src={
-                  userDetailLoading
-                    ? "Loading..."
-                    : user?.profileImage ||
-                      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                }
-                alt="Profile"
-                className="w-24 h-24 rounded-full object-cover border"
-              />
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  className="w-full p-2 border rounded-md"
-                  defaultValue={user?.name}
-                  disabled
+            <div className="flex flex-col md:flex-row items-center gap-8 mb-8">
+              <div className="relative">
+                <img
+                  src={
+                    previewImage ||
+                    user.profileImage ||
+                    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                  }
+                  alt="Profile"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-[#D6A85F]/30 shadow-lg"
                 />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#D6A85F]/20 to-transparent"></div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  className="w-full p-2 border rounded-md"
-                  defaultValue={user?.email}
-                  disabled
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
-                <input
-                  type="tel"
-                  placeholder="Not added"
-                  className="w-full p-2 border rounded-md"
-                  disabled
-                  defaultValue={user?.phone}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Bio</label>
-                <textarea
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Not added"
-                  rows={4}
-                  disabled
-                  defaultValue={user?.bio}
-                />
-              </div>
-
-              <div className="pt-4 mb-4">
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="bg-[#D6A85F] text-white hover:bg-[#de9f40] px-4 py-2 rounded-md"
-                >
-                  Edit Details
-                </button>
+              <div className="text-center md:text-left space-y-3">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-[#D6A85F]/20">
+                  <p className="text-gray-700">
+                    <span className="font-semibold text-[#D6A85F]">Name:</span> {user.name}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-semibold text-[#D6A85F]">Email:</span> {user.email}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-semibold text-[#D6A85F]">Phone:</span> {user.phone || "Not added"}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-semibold text-[#D6A85F]">Bio:</span> {user.bio || "Not added"}
+                  </p>
+                </div>
               </div>
             </div>
-            <hr />
-            <h2 className="font-serif text-2xl font-medium mb-4 mt-4">
-              Update Password
-            </h2>
-            <form onSubmit={passwordFormik.handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Current password
-                </label>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={passwordFormik.values.currentPassword}
-                  onChange={passwordFormik.handleChange}
-                  placeholder="enter your current password"
-                  className="w-full p-2 border rounded-md"
-                />
-                {passwordFormik.touched.currentPassword &&
-                  passwordFormik.errors.currentPassword && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {passwordFormik.errors.currentPassword}
-                    </p>
-                  )}
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  New password
-                </label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordFormik.values.newPassword}
-                  onChange={passwordFormik.handleChange}
-                  placeholder="enter your new password"
-                  className="w-full p-2 border rounded-md"
-                />
-                {passwordFormik.touched.newPassword &&
-                  passwordFormik.errors.newPassword && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {passwordFormik.errors.newPassword}
-                    </p>
-                  )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Confirm password
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordFormik.values.confirmPassword}
-                  onChange={passwordFormik.handleChange}
-                  placeholder="confirm new password"
-                  className="w-full p-2 border rounded-md"
-                />
-                {passwordFormik.touched.confirmPassword &&
-                  passwordFormik.errors.confirmPassword && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {passwordFormik.errors.confirmPassword}
-                    </p>
-                  )}
-              </div>
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  className="bg-[#D6A85F] text-white hover:bg-[#de9f40] px-4 py-2 rounded-md"
-                >
-                  Change Password
-                </button>
-              </div>
-            </form>
+
+            <div className="mb-8">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-gradient-to-r from-[#D6A85F] to-[#E8B866] text-white font-medium px-6 py-3 rounded-lg hover:from-[#C19A56] hover:to-[#D6A85F] transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                Edit Details
+              </button>
+            </div>
+
+            <hr className="my-8 border-[#D6A85F]/20" />
+
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-xl border border-[#D6A85F]/20">
+              <h3 className="text-2xl font-serif font-semibold text-gray-800 mb-6">Change Password</h3>
+              <form
+                onSubmit={passwordFormik.handleSubmit}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl"
+              >
+                <div className="col-span-1 md:col-span-2">
+                  <Label className="text-gray-700 font-medium">Current Password</Label>
+                  <Input
+                    type="password"
+                    name="currentPassword"
+                    value={passwordFormik.values.currentPassword}
+                    onChange={passwordFormik.handleChange}
+                    className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
+                  />
+                  {passwordFormik.touched.currentPassword &&
+                    passwordFormik.errors.currentPassword && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {passwordFormik.errors.currentPassword}
+                      </p>
+                    )}
+                </div>
+
+                <div>
+                  <Label className="text-gray-700 font-medium">New Password</Label>
+                  <Input
+                    type="password"
+                    name="newPassword"
+                    value={passwordFormik.values.newPassword}
+                    onChange={passwordFormik.handleChange}
+                    className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
+                  />
+                  {passwordFormik.touched.newPassword &&
+                    passwordFormik.errors.newPassword && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {passwordFormik.errors.newPassword}
+                      </p>
+                    )}
+                </div>
+
+                <div>
+                  <Label className="text-gray-700 font-medium">Confirm Password</Label>
+                  <Input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordFormik.values.confirmPassword}
+                    onChange={passwordFormik.handleChange}
+                    className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
+                  />
+                  {passwordFormik.touched.confirmPassword &&
+                    passwordFormik.errors.confirmPassword && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {passwordFormik.errors.confirmPassword}
+                      </p>
+                    )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <Button 
+                    type="submit" 
+                    className="bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F] w-full py-3 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    Change Password
+                  </Button>
+                </div>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      {/* edit modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] border-[#D6A85F]/20">
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogTitle className="text-2xl font-serif text-gray-800">Edit Profile</DialogTitle>
           </DialogHeader>
-          <form onSubmit={formik.handleSubmit} className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <img
-                src={
-                  previewImage ||
-                  user?.profileImage ||
-                  "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                }
-                alt="Profile"
-                className="w-20 h-20 rounded-full object-cover border"
-              />
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Profile Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
-              </div>
-            </div>
-
+          <form onSubmit={formik.handleSubmit} className="space-y-6 mt-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
-              <input
+              <Label className="text-gray-700 font-medium">Name</Label>
+              <Input
                 type="text"
                 name="name"
                 value={formik.values.name}
                 onChange={formik.handleChange}
-                className="w-full p-2 border rounded-md"
+                className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
               />
               {formik.touched.name && formik.errors.name && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formik.errors.name}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formik.errors.name}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
-              <input
-                type="tel"
+              <Label className="text-gray-700 font-medium">Phone</Label>
+              <Input
+                type="text"
                 name="phone"
                 value={formik.values.phone}
                 onChange={formik.handleChange}
-                className="w-full p-2 border rounded-md"
+                className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Bio</label>
-              <textarea
+              <Label className="text-gray-700 font-medium">Bio</Label>
+              <Textarea
                 name="bio"
                 value={formik.values.bio}
                 onChange={formik.handleChange}
-                className="w-full p-2 border rounded-md"
-                rows={4}
+                className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20 min-h-[100px]"
               />
             </div>
 
-            <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                className="bg-[#D6A85F] text-white hover:bg-[#de9f40] px-4 py-2 rounded-md"
-              >
-                {isProfileUpdating ? "Updating..." : "Save Changes"}
-              </button>
+            <div>
+              <Label className="text-gray-700 font-medium">Profile Image</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="mt-2 border-[#D6A85F]/30 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20"
+              />
+              {previewImage && (
+                <img
+                  src={previewImage}
+                  alt="Preview"
+                  className="mt-3 w-20 h-20 rounded-full object-cover border-2 border-[#D6A85F]/30"
+                />
+              )}
             </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F] py-3 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+              disabled={isProfileUpdating}
+            >
+              {isProfileUpdating ? "Saving..." : "Save Changes"}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
