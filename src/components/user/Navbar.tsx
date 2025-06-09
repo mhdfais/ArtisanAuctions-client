@@ -80,25 +80,25 @@ const Navbar: React.FC = () => {
       <div className="hidden md:flex space-x-4 lg:space-x-8 items-center">
         <Link
           to="/"
-          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm lg:text-base"
+          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm font-medium lg:text-base"
         >
           Home
         </Link>
         <Link
           to="/auctions"
-          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm lg:text-base"
+          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm font-medium lg:text-base"
         >
           Auctions
         </Link>
         <Link
           to="/artists"
-          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm lg:text-base"
+          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm font-medium lg:text-base"
         >
           Artists
         </Link>
         <Link
           to="/about"
-          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm lg:text-base"
+          className="text-[#2E2E2E] hover:text-[#D6A85F] transition-colors text-sm font-medium lg:text-base"
         >
           About
         </Link>

@@ -9,6 +9,7 @@ import OtpVerification from "@/pages/user/OtpVerification";
 import Profile from "@/pages/user/Profile";
 import Signup from "@/pages/user/Signup";
 import { Route } from "react-router-dom";
+import ArtworkDetails from "@/pages/user/ArtworkDetails";
 
 const UserRoutes = (
   <>
@@ -57,6 +58,14 @@ const UserRoutes = (
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/artwork/:id"
+        element={
+          <ProtectedRoute>
+            <ArtworkDetails />
           </ProtectedRoute>
         }
       />

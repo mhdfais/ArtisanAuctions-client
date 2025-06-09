@@ -23,6 +23,7 @@ interface userDetail {
   bio: string;
   phone: string;
   profileImage: string;
+  isSeller:boolean
 }
 
 interface Props {
@@ -31,6 +32,9 @@ interface Props {
 }
 
 const ProfileTab = ({ user, setUser }: Props) => {
+
+  // console.log(user)
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProfileUpdating, setIsProfileUpdating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
