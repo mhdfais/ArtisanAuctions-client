@@ -146,17 +146,19 @@ export const confirmDeposit = async (paymentIntentId: string) => {
 export const getArtworkById = async (artworkId: string) => {
   try {
     const response = await userApi.get(`/users/getArtworkById/${artworkId}`);
-    return response
+    return response;
   } catch (error) {
     throw error || "failed to fetch artwork details";
   }
 };
 
-export const getArtworkBidHistory=async(artworkId:string)=>{
+export const getArtworkBidHistory = async (artworkId: string) => {
   try {
-    const response=await userApi.get(`/users/getArtworkBids/${artworkId}`)
-    return response
+    const response = await userApi.get(`/users/getArtworkBids/${artworkId}`);
+    return response;
   } catch (error) {
-    throw error||'failed to fetch artwork bid history'
+    throw error || "failed to fetch artwork bid history";
   }
-}
+};
+
+

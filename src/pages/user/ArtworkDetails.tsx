@@ -1,36 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  ArrowLeft, 
-  Heart, 
-  Share2, 
-  Clock, 
-  Eye, 
-  Star,
-  User,
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  Heart,
+  Share2,
+  Clock,
+  Eye,
+  Users,
+  ZoomIn,
+  History,
   Palette,
   Ruler,
   Calendar,
-  DollarSign,
-  Users,
-  ZoomIn,
-  History
-} from 'lucide-react';
-import { getArtworkById, getArtworkBidHistory } from '@/services/userService';
-import useToast from '@/hooks/useToast';
+} from "lucide-react";
+import { getArtworkById, getArtworkBidHistory } from "@/services/userService";
+import useToast from "@/hooks/useToast";
+import { useAuctionSocket } from "@/hooks/useAuctionSocket";
+import { RootState } from "@/redux/store/store";
+// import { RootState } from "@/store";
 
-
-// Extend IArtwork interface to include additional fields
 interface IArtworkDetails {
   _id: string;
   title: string;
-  approvalStatus: 'pending' | 'rejected' | 'approved';
+  approvalStatus: "pending" | "rejected" | "approved";
   isActive: boolean;
   reservePrice: number;
   listedDate: string;
@@ -46,18 +45,7 @@ interface IArtworkDetails {
   yearCreated: number;
   category: string;
   images: string[];
-  // artist: {
-  //   _id: string;
-  //   name: string;
-  //   bio: string;
-  //   rating: number;
-  //   totalSales: number;
-  // };
-  condition?: string;
-  provenance?: string;
-  certification?: string;
-  views: number;
-  watchers: number;
+  isEnded: boolean;
 }
 
 interface IBid {
@@ -73,30 +61,70 @@ const ArtworkDetails = () => {
   const navigate = useNavigate();
   const [artwork, setArtwork] = useState<IArtworkDetails | null>(null);
   const [bidHistory, setBidHistory] = useState<IBid[]>([]);
-  const [bidAmount, setBidAmount] = useState('');
+  const [bidAmount, setBidAmount] = useState("");
   const [isFavorited, setIsFavorited] = useState(false);
   const [showBidHistory, setShowBidHistory] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<string>('')
-  const { error: toastError } = useToast();
+  const [err, setErr] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [isBidding, setIsBidding] = useState(false);
+  const { error, success } = useToast();
+
+  // Get user data from Redux
+  const { isLoggedIn, user } = useSelector((state: RootState) => state.auth);
+  const email = user?.email || "";
+  // const userName = user?.name || "";
+
+  // WebSocket hook
+  const { placeBid } = useAuctionSocket({
+    artworkId: id || "",
+    email,
+    onNewBid: (bid) => {
+      setBidHistory((prev) => [
+        {
+          _id: bid.timestamp,
+          bidderId: bid.bidderId,
+          bidderName: bid.bidderName,
+          amount: bid.bidAmount,
+          createdAt: bid.timestamp,
+        },
+        ...prev,
+      ]);
+      setArtwork((prev) =>
+        prev ? { ...prev, highestBid: bid.bidAmount } : prev
+      );
+    },
+    onAuctionEnded: (winner) => {
+      setTimeLeft("Ended");
+      if (winner) {
+        success(
+          "Auction Ended",
+          `Winner: ${winner.bidderName} with ${formatCurrency(winner.amount)}`
+        );
+      } else {
+        success("Auction Ended", "No winner for this auction");
+      }
+    },
+  });
 
   useEffect(() => {
     const fetchArtwork = async () => {
       if (!id) return;
       setLoading(true);
+      // console.log(id)
       try {
-        const artworkResponse = await getArtworkById(id);
-        // const bidHistoryResponse = await getArtworkBidHistory(id);
+        const [artworkResponse, bidHistoryResponse] = await Promise.all([
+          getArtworkById(id),
+          getArtworkBidHistory(id),
+        ]);
         setArtwork(artworkResponse.data.details);
-        // setBidHistory(bidHistoryResponse.data);
-        console.log('Artwork:', artworkResponse.data);
-        // console.log('Bid History:', bidHistoryResponse.data);
+        setBidHistory(bidHistoryResponse.data.bids || []);
+        console.log(bidHistoryResponse.data.bids);
       } catch (err) {
-        console.error('Error fetching artwork details:', err);
-        setError('Failed to load artwork details');
-        toastError('Error', 'Failed to load artwork details');
+        console.error("Error fetching artwork details:", err);
+        setErr("Failed to load artwork details");
+        error("Error", "Failed to load artwork details");
       } finally {
         setLoading(false);
       }
@@ -104,38 +132,71 @@ const ArtworkDetails = () => {
     fetchArtwork();
   }, [id]);
 
-  const handleBidSubmit = (e: React.FormEvent) => {
+  const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bidAmount || Number(bidAmount) <= (artwork?.highestBid || 0)) {
-      toastError('Error', `Bid must be higher than ${formatCurrency(artwork?.highestBid || 0)}`);
+    if (!isLoggedIn) {
+      error("Error", "Please log in to place a bid");
+      navigate("/login");
       return;
     }
-    console.log('Placing bid:', bidAmount);
-    // Implement actual bid submission API call here
+    const amount = Number(bidAmount);
+    const minBid = artwork ? artwork.highestBid + 50 : 0;
+    if (!bidAmount || amount < minBid) {
+      error("Error", `Bid must be at least ${formatCurrency(minBid)}`);
+      return;
+    }
+
+    const tempBidId = new Date().getTime().toString(); // Temporary ID
+    setBidHistory((prev) => [
+      {
+        _id: tempBidId,
+        bidderId: user?._id || "",
+        bidderName: user?.name || "",
+        amount,
+        createdAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setArtwork((prev) => (prev ? { ...prev, highestBid: amount } : prev));
+
+    setIsBidding(true);
+    placeBid(amount, (err) => {
+      setIsBidding(false);
+      if (err) {
+        setBidHistory((prev) => prev.filter((bid) => bid._id !== tempBidId));
+        setArtwork((prev) =>
+          prev ? { ...prev, highestBid: prev.highestBid - 50 } : prev
+        );
+        error("Error", err);
+      } else {
+        success(
+          "Success",
+          `Bid of ${formatCurrency(amount)} placed successfully`
+        );
+        setBidAmount("");
+      }
+    });
   };
 
-  const formatTimeLeft = (endTime: string) => {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end.getTime() - now.getTime();
-    if (diff <= 0) return 'Ended';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
+  // const formatTimeLeft = (endTime: string) => {
+  //   const now = new Date();
+  //   const end = new Date(endTime);
+  //   const diff = end.getTime() - now.getTime();
+  //   if (diff <= 0) return "Ended";
+  //   const hours = Math.floor(diff / (1000 * 60 * 60));
+  //   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  //   return `${hours}h ${minutes}m`;
+  // };
 
   const getTimeLeft = (end: string) => {
     const now = Date.now();
     const endTime = new Date(end).getTime();
-
-    if (isNaN(endTime)) return 'Invalid date';
-    if (now >= endTime) return 'Ended';
-
+    if (isNaN(endTime)) return "Invalid date";
+    if (now >= endTime) return "Ended";
     const diff = endTime - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
@@ -146,24 +207,21 @@ const ArtworkDetails = () => {
         setTimeLeft(result);
       }
     };
-
-    updateTimer(); // Initial call
-
+    updateTimer();
     const interval =
       artwork?.auctionEndTime &&
       new Date(artwork.auctionEndTime).getTime() > Date.now()
         ? setInterval(updateTimer, 1000)
         : null;
-
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [artwork?.auctionEndTime]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
@@ -171,20 +229,24 @@ const ArtworkDetails = () => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const img = e.currentTarget.querySelector('img') as HTMLImageElement;
+    const img = e.currentTarget.querySelector("img") as HTMLImageElement;
     if (img) {
       img.style.transformOrigin = `${x}% ${y}%`;
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
-
-  if (error || !artwork) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600">{error || 'Artwork not found'}</p>
+        Loading...
+      </div>
+    );
+  }
+
+  if (err || !artwork) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-600">{err || "Artwork not found"}</p>
       </div>
     );
   }
@@ -192,7 +254,6 @@ const ArtworkDetails = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F9F6F1] via-[#FDF9F3] to-[#F5F0E8] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
@@ -207,9 +268,11 @@ const ArtworkDetails = () => {
               variant="ghost"
               size="sm"
               onClick={() => setIsFavorited(!isFavorited)}
-              className={isFavorited ? 'text-red-500' : 'text-slate-600'}
+              className={isFavorited ? "text-red-500" : "text-slate-600"}
             >
-              <Heart className={`h-5 w-5 ${isFavorited ? 'fill-current' : ''}`} />
+              <Heart
+                className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`}
+              />
             </Button>
             <Button variant="ghost" size="sm" className="text-slate-600">
               <Share2 className="h-5 w-5" />
@@ -218,15 +281,16 @@ const ArtworkDetails = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
           <div className="space-y-4">
             <Card className="overflow-hidden shadow-2xl relative group">
-              <div 
+              <div
                 className="relative w-full h-96 lg:h-[500px] overflow-hidden cursor-zoom-in"
                 onMouseMove={handleMouseMove}
               >
                 <img
-                  src={artwork.images[selectedImage] || '/placeholder-image.jpg'}
+                  src={
+                    artwork.images[selectedImage] || "/placeholder-image.jpg"
+                  }
                   alt={artwork.title}
                   className="w-full h-full object-cover transition-transform duration-200 ease-out group-hover:scale-150"
                 />
@@ -243,7 +307,10 @@ const ArtworkDetails = () => {
                 <DialogContent className="max-w-4xl w-full h-[80vh] p-0">
                   <div className="relative w-full h-full bg-black flex items-center justify-center">
                     <img
-                      src={artwork.images[selectedImage] || '/placeholder-image.jpg'}
+                      src={
+                        artwork.images[selectedImage] ||
+                        "/placeholder-image.jpg"
+                      }
                       alt={artwork.title}
                       className="max-w-full max-h-full object-contain"
                     />
@@ -257,7 +324,9 @@ const ArtworkDetails = () => {
                   key={index}
                   onClick={() => setSelectedImage(index)}
                   className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors group ${
-                    selectedImage === index ? 'border-[#D6A85F]' : 'border-transparent'
+                    selectedImage === index
+                      ? "border-[#D6A85F]"
+                      : "border-transparent"
                   }`}
                 >
                   <img
@@ -270,20 +339,21 @@ const ArtworkDetails = () => {
             </div>
           </div>
 
-          {/* Artwork Details */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h1 className="text-3xl font-serif font-bold text-slate-800">{artwork.title}</h1>
-                <Badge className="bg-green-100 text-green-800">
-                  {artwork.isActive ? 'Live Auction' : artwork.approvalStatus}
-                </Badge>
+                <h1 className="text-3xl font-serif font-bold text-slate-800">
+                  {artwork.title}
+                </h1>
+                {artwork.isEnded ? (
+                  <Badge className="bg-red-100 text-red-800">Ended</Badge>
+                ) : (
+                  <Badge className="bg-green-100 text-green-800">
+                    Live Auction
+                  </Badge>
+                )}
               </div>
               {/* <div className="flex items-center space-x-4 text-slate-600">
-                <div className="flex items-center space-x-1">
-                  <User className="h-4 w-4" />
-                  <span>by {artwork.artist.name}</span>
-                </div>
                 <div className="flex items-center space-x-1">
                   <Eye className="h-4 w-4" />
                   <span>{artwork.views} views</span>
@@ -299,10 +369,16 @@ const ArtworkDetails = () => {
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-slate-600 font-medium mb-1">Current Bid</p>
-                    <p className="text-3xl font-bold text-[#D6A85F]">{formatCurrency(artwork.highestBid)}</p>
+                    <p className="text-sm text-slate-600 font-medium mb-1">
+                      Current Bid
+                    </p>
+                    <p className="text-3xl font-bold text-[#D6A85F]">
+                      {formatCurrency(artwork.highestBid)}
+                    </p>
                     <div className="flex items-center space-x-2">
-                      <p className="text-sm text-slate-500">{bidHistory.length} bids placed</p>
+                      <p className="text-sm text-slate-500">
+                        {bidHistory.length} bids placed
+                      </p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -315,12 +391,19 @@ const ArtworkDetails = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-slate-600 font-medium mb-1">Time Left</p>
+                    <p className="text-sm text-slate-600 font-medium mb-1">
+                      Time Left
+                    </p>
                     <div className="flex items-center justify-end space-x-1">
                       <Clock className="h-4 w-4 text-red-500" />
-                      <p className="text-xl font-bold text-slate-800">{timeLeft}</p>
+                      <p className="text-xl font-bold text-slate-800">
+                        {timeLeft}
+                      </p>
                     </div>
-                    <p className="text-sm text-slate-500">Ends {new Date(artwork.auctionEndTime).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-500">
+                      Ends{" "}
+                      {new Date(artwork.auctionEndTime).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -329,53 +412,118 @@ const ArtworkDetails = () => {
             {showBidHistory && (
               <Card className="shadow-lg">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">Bid History</h3>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {bidHistory.map((bid) => (
-                      <div
-                        key={bid._id}
-                        className={`flex justify-between items-center p-3 rounded-lg ${
-                          bid.amount === artwork.highestBid ? 'bg-green-50 border border-green-200' : 'bg-slate-50'
-                        }`}
-                      >
-                        <div>
-                          <p className="font-medium text-slate-800">{bid.bidderName}</p>
-                          <p className="text-sm text-slate-500">{new Date(bid.createdAt).toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-bold ${bid.amount === artwork.highestBid ? 'text-green-700' : 'text-slate-700'}`}>
-                            {formatCurrency(bid.amount)}
-                          </p>
-                          {bid.amount === artwork.highestBid && (
-                            <p className="text-xs text-green-600 font-medium">Highest Bid</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-800">
+                      Bid History
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBidHistory(false)}
+                      className="text-slate-500 hover:text-slate-700"
+                    >
+                      Close
+                    </Button>
                   </div>
+
+                  {bidHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-12 gap-2 text-xs text-slate-500 font-medium px-2">
+                        <div className="col-span-5">Bidder</div>
+                        <div className="col-span-3 text-right">Amount</div>
+                        <div className="col-span-4 text-right">Time</div>
+                      </div>
+
+                      <div className="max-h-96 overflow-y-auto pr-2">
+                        {bidHistory.map((bid) => (
+                          <div
+                            key={bid._id}
+                            className={`grid grid-cols-12 gap-2 items-center p-3 rounded-lg transition-colors ${
+                              bid.amount === artwork.highestBid
+                                ? "bg-green-50 border border-green-200"
+                                : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="col-span-5 font-medium text-slate-800 truncate">
+                              {bid.bidderName}
+                            </div>
+                            <div className="col-span-3 text-right font-bold">
+                              <span
+                                className={
+                                  bid.amount === artwork.highestBid
+                                    ? "text-green-600"
+                                    : "text-slate-700"
+                                }
+                              >
+                                {formatCurrency(bid.amount)}
+                              </span>
+                            </div>
+                            <div className="col-span-4 text-right text-sm text-slate-500">
+                              {new Date(bid.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <History className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                      <p className="text-slate-500">
+                        No bids have been placed yet
+                      </p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Be the first to place a bid!
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             <Card className="shadow-lg">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Place Your Bid</h3>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                  Place Your Bid
+                </h3>
                 <form onSubmit={handleBidSubmit} className="space-y-4">
                   <div className="flex space-x-2">
                     <div className="flex-1">
                       <Input
                         type="number"
-                        placeholder={`Minimum: ${formatCurrency(artwork.highestBid + 50)}`}
+                        placeholder={
+                          isLoggedIn
+                            ? `Minimum: ${formatCurrency(
+                                artwork.highestBid + 50
+                              )}`
+                            : "Log in to bid"
+                        }
                         value={bidAmount}
                         onChange={(e) => setBidAmount(e.target.value)}
                         className="text-lg"
+                        disabled={
+                          !isLoggedIn ||
+                          isBidding ||
+                          timeLeft === "Ended" ||
+                          !artwork.isActive ||
+                          artwork.isEnded
+                        }
                       />
                     </div>
-                    <Button 
+                    <Button
                       type="submit"
                       className="bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F] px-8"
+                      disabled={
+                        !isLoggedIn ||
+                        isBidding ||
+                        timeLeft === "Ended" ||
+                        !artwork.isActive ||
+                        artwork.isEnded
+                      }
                     >
-                      Place Bid
+                      {isBidding ? "Placing Bid..." : "Place Bid"}
                     </Button>
                   </div>
                   <p className="text-sm text-slate-500">
@@ -387,14 +535,18 @@ const ArtworkDetails = () => {
 
             <Card className="shadow-lg">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Artwork Details</h3>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                  Artwork Details
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <Palette className="h-4 w-4 text-slate-500" />
                       <div>
                         <span className="text-slate-500">Medium:</span>
-                        <p className="font-medium text-slate-800">{artwork.medium}</p>
+                        <p className="font-medium text-slate-800">
+                          {artwork.medium}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -408,79 +560,63 @@ const ArtworkDetails = () => {
                       <Calendar className="h-4 w-4 text-slate-500" />
                       <div>
                         <span className="text-slate-500">Year:</span>
-                        <p className="font-medium text-slate-800">{artwork.yearCreated}</p>
+                        <p className="font-medium text-slate-800">
+                          {artwork.yearCreated}
+                        </p>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div>
                       <span className="text-slate-500">Category:</span>
-                      <p className="font-medium text-slate-800">{artwork.category}</p>
+                      <p className="font-medium text-slate-800">
+                        {artwork.category}
+                      </p>
                     </div>
                     <div>
                       <span className="text-slate-500">Condition:</span>
-                      <p className="font-medium text-slate-800">{artwork.condition || 'N/A'}</p>
+                      <p className="font-medium text-slate-800">N/A</p>
                     </div>
                     <div>
                       <span className="text-slate-500">Provenance:</span>
-                      <p className="font-medium text-slate-800">{artwork.provenance || 'N/A'}</p>
+                      <p className="font-medium text-slate-800">N/A</p>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* <Card className="shadow-lg">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">About the Artist</h3>
-                <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-r from-[#D6A85F] to-[#E8B866] rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
-                      {artwork.artist.name.split(' ').map(n => n[0]).join('')}
-                    </span>
+            <Card className="mt-12 shadow-lg">
+              <CardContent className="p-8">
+                <h3 className="text-2xl font-semibold text-slate-800 mb-4">
+                  Description
+                </h3>
+                <p className="text-slate-700 leading-relaxed text-lg">
+                  {artwork.description}
+                </p>
+                <Separator className="my-6" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                  <div>
+                    <h4 className="font-semibold text-slate-800 mb-2">
+                      Additional Information
+                    </h4>
+                    <p className="text-slate-600">No certification provided</p>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h4 className="font-semibold text-slate-800">{artwork.artist.name}</h4>
-                      <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <span className="text-sm text-slate-600">{artwork.artist.rating}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-3">{artwork.artist.bio}</p>
-                    <div className="flex items-center space-x-4 text-sm text-slate-500">
-                      <div className="flex items-center space-x-1">
-                        <DollarSign className="h-4 w-4" />
-                        <span>{artwork.artist.totalSales} sales</span>
-                      </div>
-                    </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 mb-2">
+                      Auction Details
+                    </h4>
+                    <p className="text-slate-600">
+                      This auction will end on{" "}
+                      {new Date(artwork.auctionEndTime).toLocaleDateString()} at{" "}
+                      {new Date(artwork.auctionEndTime).toLocaleTimeString()}
+                    </p>
                   </div>
                 </div>
               </CardContent>
-            </Card> */}
+            </Card>
           </div>
         </div>
-
-        <Card className="mt-12 shadow-lg">
-          <CardContent className="p-8">
-            <h3 className="text-2xl font-semibold text-slate-800 mb-4">Description</h3>
-            <p className="text-slate-700 leading-relaxed text-lg">{artwork.description}</p>
-            <Separator className="my-6" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div>
-                <h4 className="font-semibold text-slate-800 mb-2">Additional Information</h4>
-                <p className="text-slate-600">{artwork.certification || 'No certification provided'}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-800 mb-2">Auction Details</h4>
-                <p className="text-slate-600">
-                  This auction will end on {new Date(artwork.auctionEndTime).toLocaleDateString()} at{' '}
-                  {new Date(artwork.auctionEndTime).toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

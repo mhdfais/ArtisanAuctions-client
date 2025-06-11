@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 interface BidEvent {
   artworkId: string;
   bidderId: string;
-  bidderName: string; // Added to match IBid interface
+  bidderName: string;
   bidAmount: number;
   timestamp: string;
 }
@@ -20,70 +20,70 @@ interface AuctionEndedEvent {
 
 interface UseAuctionSocketProps {
   artworkId: string;
-  userId: string;
+  email: string;
   onNewBid: (bid: BidEvent) => void;
   onAuctionEnded: (winner: AuctionEndedEvent["winner"]) => void;
 }
 
 export const useAuctionSocket = ({
   artworkId,
-  userId,
+  email,
   onNewBid,
   onAuctionEnded,
 }: UseAuctionSocketProps) => {
   const socketRef = useRef(socket);
 
-  // Function to place a bid
   const placeBid = useCallback(
     (bidAmount: number, callback: (error?: string) => void) => {
+      if (!email) {
+        callback("User not authenticated");
+        return;
+      }
       socketRef.current.emit(
         "placeBid",
-        { artworkId, userId, bidAmount },
+        { artworkId, email, bidAmount },
         (response: { success: boolean; error?: string }) => {
           if (!response.success) {
             callback(response.error || "Failed to place bid");
           } else {
-            callback(); // Bid placed successfully
+            callback();
           }
         }
       );
     },
-    [artworkId, userId]
+    [artworkId, email]
   );
 
   useEffect(() => {
+    if (!email || !artworkId) return;
+
     const s = socketRef.current;
 
-    // Join auction room
-    s.emit("joinAuction", { artworkId, userId });
+    s.emit("joinAuction", { artworkId, email });
 
-    // Listen for new bids
     s.on("newBid", (bid: BidEvent) => {
       if (bid.artworkId === artworkId) {
         onNewBid(bid);
       }
     });
 
-    // Listen for auction end
     s.on("auctionEnded", (event: AuctionEndedEvent) => {
       if (event.artworkId === artworkId) {
         onAuctionEnded(event.winner);
       }
     });
 
-    // Listen for errors
     s.on("error", (error: { message: string }) => {
       console.error("Socket error:", error.message);
     });
 
-    // Cleanup on unmount
     return () => {
-      s.emit("leaveAuction", { artworkId, userId });
+      s.emit("leaveAuction", { artworkId, email });
       s.off("newBid");
       s.off("auctionEnded");
       s.off("error");
     };
-  }, [artworkId, userId, onNewBid, onAuctionEnded]);
+  }, [artworkId, email, onNewBid, onAuctionEnded]);
 
   return { placeBid };
 };
