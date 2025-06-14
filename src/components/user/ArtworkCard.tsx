@@ -77,7 +77,7 @@ const ArtworkCard: React.FC<ArtworkCardProps> = ({ details,onClick }) => {
           alt="Artwork"
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        {/* <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">fsd</div> */}
         <div className="absolute top-3 right-3 bg-gradient-to-r from-[#D6A85F] to-[#E8B866] text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
           {timeLeft === "Ended" ? "Ended" : "Live"}
         </div>
@@ -100,6 +100,7 @@ const ArtworkCard: React.FC<ArtworkCardProps> = ({ details,onClick }) => {
           <div className="text-right">
             <p className="text-sm text-gray-600 font-medium">Time Left</p>
             <p className="font-semibold text-gray-800">{timeLeft}</p>
+            <p className="text-sm text-slate-500">{new Date(details.auctionStartTime).toLocaleString()}</p>
           </div>
         </div>
 

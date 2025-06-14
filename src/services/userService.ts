@@ -161,4 +161,20 @@ export const getArtworkBidHistory = async (artworkId: string) => {
   }
 };
 
+export const getTransactions = async () => {
+  try {
+    const response = await userApi.get("/users/getTransactions");
+    return response;
+  } catch (error) {
+    throw error || "failed to get transactions";
+  }
+};
 
+export const getBids = async () => {
+  try {
+    const response = await userApi.get("/users/getBids");
+    return response;
+  } catch (error) {
+    throw error || "failed to get bids";
+  }
+};

@@ -24,6 +24,7 @@ import { getArtworkById, getArtworkBidHistory } from "@/services/userService";
 import useToast from "@/hooks/useToast";
 import { useAuctionSocket } from "@/hooks/useAuctionSocket";
 import { RootState } from "@/redux/store/store";
+import { logout } from "@/redux/store/authSlice";
 // import { RootState } from "@/store";
 
 interface IArtworkDetails {
@@ -120,7 +121,7 @@ const ArtworkDetails = () => {
         ]);
         setArtwork(artworkResponse.data.details);
         setBidHistory(bidHistoryResponse.data.bids || []);
-        console.log(bidHistoryResponse.data.bids);
+        // console.log(bidHistoryResponse.data.bids);
       } catch (err) {
         console.error("Error fetching artwork details:", err);
         setErr("Failed to load artwork details");
@@ -133,20 +134,40 @@ const ArtworkDetails = () => {
   }, [id]);
 
   const handleBidSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      error("Error", "Please log in to place a bid");
-      navigate("/login");
-      return;
-    }
-    const amount = Number(bidAmount);
-    const minBid = artwork ? artwork.highestBid + 50 : 0;
-    if (!bidAmount || amount < minBid) {
-      error("Error", `Bid must be at least ${formatCurrency(minBid)}`);
+  e.preventDefault();
+
+  if (!isLoggedIn) {
+    error("Error", "Please log in to place a bid");
+    navigate("/login");
+    return;
+  }
+
+  const amount = Number(bidAmount);
+  const minBid = artwork ? artwork.highestBid + 50 : 0;
+  if (!bidAmount || amount < minBid) {
+    error("Error", `Bid must be at least ${formatCurrency(minBid)}`);
+    return;
+  }
+
+  setIsBidding(true);
+
+  placeBid(amount, (err) => {
+    setIsBidding(false);
+
+    if (err) {
+      error("Error", err);
+      if (
+        err === "Authentication failed" ||
+        err === "User not authenticated"
+      ) {
+        logout();
+        navigate("/login");
+      }
       return;
     }
 
-    const tempBidId = new Date().getTime().toString(); // Temporary ID
+    const tempBidId = new Date().getTime().toString();
+
     setBidHistory((prev) => [
       {
         _id: tempBidId,
@@ -157,26 +178,14 @@ const ArtworkDetails = () => {
       },
       ...prev,
     ]);
+
     setArtwork((prev) => (prev ? { ...prev, highestBid: amount } : prev));
 
-    setIsBidding(true);
-    placeBid(amount, (err) => {
-      setIsBidding(false);
-      if (err) {
-        setBidHistory((prev) => prev.filter((bid) => bid._id !== tempBidId));
-        setArtwork((prev) =>
-          prev ? { ...prev, highestBid: prev.highestBid - 50 } : prev
-        );
-        error("Error", err);
-      } else {
-        success(
-          "Success",
-          `Bid of ${formatCurrency(amount)} placed successfully`
-        );
-        setBidAmount("");
-      }
-    });
-  };
+    success("Success", `Bid of ${formatCurrency(amount)} placed successfully`);
+    setBidAmount("");
+  });
+};
+
 
   // const formatTimeLeft = (endTime: string) => {
   //   const now = new Date();
@@ -188,10 +197,12 @@ const ArtworkDetails = () => {
   //   return `${hours}h ${minutes}m`;
   // };
 
-  const getTimeLeft = (end: string) => {
+  const getTimeLeft = (end: string, start: string) => {
     const now = Date.now();
     const endTime = new Date(end).getTime();
+    const startTime = new Date(start).getTime();
     if (isNaN(endTime)) return "Invalid date";
+    if (now < startTime) return "Auction starts soon";
     if (now >= endTime) return "Ended";
     const diff = endTime - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -203,7 +214,10 @@ const ArtworkDetails = () => {
   useEffect(() => {
     const updateTimer = () => {
       if (artwork?.auctionEndTime) {
-        const result = getTimeLeft(artwork.auctionEndTime);
+        const result = getTimeLeft(
+          artwork.auctionEndTime,
+          artwork.auctionStartTime
+        );
         setTimeLeft(result);
       }
     };
@@ -400,6 +414,11 @@ const ArtworkDetails = () => {
                         {timeLeft}
                       </p>
                     </div>
+
+                    <p className="text-sm text-slate-500">
+                      Start At{" "}
+                      {new Date(artwork.auctionStartTime).toLocaleString()}
+                    </p>
                     <p className="text-sm text-slate-500">
                       Ends{" "}
                       {new Date(artwork.auctionEndTime).toLocaleDateString()}

@@ -10,7 +10,7 @@ import { addArtwork } from "@/services/userService";
 
 interface ArtworkFormProps {
   cancel: () => void;
-  fetchArtworks:()=>any
+  fetchArtworks: () => any;
 }
 export enum ArtCategory {
   PAINTING = "Painting",
@@ -29,13 +29,14 @@ export enum Medium {
   OTHER = "Other",
 }
 
-const ArtworkForm = ({ cancel,fetchArtworks }: ArtworkFormProps) => {
+const ArtworkForm = ({ cancel, fetchArtworks }: ArtworkFormProps) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [croppedImages, setCroppedImages] = useState<File[]>([]);
   const [cropping, setCropping] = useState(false);
+  const [aspect, setAspect] = useState<number | undefined>(undefined);
 
   const { error, success } = useToast();
 
@@ -98,7 +99,7 @@ const ArtworkForm = ({ cancel,fetchArtworks }: ArtworkFormProps) => {
           setCroppedImages([]);
           formik.resetForm();
           cancel();
-          fetchArtworks()
+          fetchArtworks();
           success("Artwork", "Artwork added successfully");
         }
       } catch (err) {
@@ -107,22 +108,30 @@ const ArtworkForm = ({ cancel,fetchArtworks }: ArtworkFormProps) => {
     },
   });
 
-  
-  useEffect(() => {        // ---------------- Update Formik images when croppedImages change
+  useEffect(() => {
+    // ---------------- Update Formik images when croppedImages change
     formik.setFieldValue("images", croppedImages);
   }, [croppedImages]);
 
-  
-  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {  // ------------------- Cropper onCropComplete
+  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+    // ------------------- Cropper onCropComplete
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {   // ---------- Handle image selection (file input)  
+  // ---------- Handle image selection (file input)
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedImage(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedImage(file);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
+
+      const img = new Image();
+      img.onload = () => {
+        const aspectRatio = img.width / img.height;
+        setAspect(aspectRatio);
+      };
+      img.src = URL.createObjectURL(file);
     }
   };
 
@@ -210,7 +219,6 @@ const ArtworkForm = ({ cancel,fetchArtworks }: ArtworkFormProps) => {
         <input
           name="yearCreated"
           type="number"
-          min="1000"
           max={new Date().getFullYear()}
           value={formik.values.yearCreated}
           onChange={formik.handleChange}
@@ -379,7 +387,7 @@ const ArtworkForm = ({ cancel,fetchArtworks }: ArtworkFormProps) => {
               image={URL.createObjectURL(selectedImage)}
               crop={crop}
               zoom={zoom}
-              aspect={4 / 3}
+              aspect={aspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}

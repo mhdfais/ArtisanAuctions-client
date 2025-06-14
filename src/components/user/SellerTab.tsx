@@ -125,9 +125,9 @@ const SellerTab = ({ user }: props) => {
         error("Error", "Failed to fetch seller status");
       }
     };
-    fetchStatus();
     // console.log(user,'----')
     if (user?.isSeller) {
+      fetchStatus();
       fetchArtworks();
     }
   }, [user]);
