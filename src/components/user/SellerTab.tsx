@@ -11,6 +11,9 @@ import {
   getSellerStatus,
   getArtworks,
   scheduleAuction,
+  fetchSellerWonAuctions,
+  markAsShipped,
+  // markAsShipped,
 } from "@/services/userService";
 import ArtworkForm from "./ArtworkForm";
 
@@ -28,6 +31,7 @@ interface Listing {
   title: string;
   status: "pending" | "rejected" | "active" | "approved";
   isActive: boolean;
+  isEnded: boolean;
   price: number;
   listedDate: string | null;
   highestBid: number;
@@ -39,6 +43,35 @@ interface Listing {
   yearCreated?: number | null;
   category?: string | null;
   imageUrl?: string | null;
+  shippingStatus?: "pending" | "shipped" | null;
+  shippingAddress?: string | null;
+}
+
+interface IWonAuction {
+  id: string;
+  amount: number;
+  artworkId: string;
+  auctionEndTime: string;
+  title: string;
+  address: {
+    address: string;
+    state: string;
+    district: string;
+    place: string;
+    pincode: number;
+  };
+  image: string;
+  status: string;
+  receipt: string;
+  yearCreated: string;
+  dimensions: object;
+  medium: string;
+  description: string;
+  price: string;
+  highestBid: string;
+  auctionStartTime: string;
+  listedAt: string;
+  category: string;
 }
 
 interface props {
@@ -51,18 +84,14 @@ const SellerTab = ({ user }: props) => {
   >("none");
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [showArtworkForm, setShowArtworkForm] = useState(false);
-  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(
-    null
-  );
+  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<
-    "pending" | "rejected" | "active"
+    "pending" | "rejected" | "active" | "finished"
   >("pending");
-  const [expandedListingId, setExpandedListingId] = useState<string | null>(
-    null
-  );
-
+  const [expandedListingId, setExpandedListingId] = useState<string | null>(null);
+  const [sellerWonAuctions, setSellerWonAuctions] = useState<IWonAuction[]>([]);
   const { success, error } = useToast();
 
   const isProfileCompleted = () => {
@@ -72,7 +101,6 @@ const SellerTab = ({ user }: props) => {
   const fetchArtworks = async () => {
     try {
       const res = await getArtworks();
-      // console.log(res.data)
       const mappedListings: Listing[] = res.data.map((artwork: any) => {
         let dimensionsString: string | null = null;
         if (artwork.dimensions?.height && artwork.dimensions?.width) {
@@ -84,6 +112,7 @@ const SellerTab = ({ user }: props) => {
           title: artwork.title || "Untitled",
           status: artwork.approvalStatus || "pending",
           isActive: artwork.isActive || false,
+          isEnded: artwork.isEnded || false,
           price: Number(artwork.reservePrice) || 0,
           listedDate: artwork.createdAt
             ? new Date(artwork.createdAt).toLocaleDateString("en-US", {
@@ -104,6 +133,8 @@ const SellerTab = ({ user }: props) => {
             Array.isArray(artwork.images) && artwork.images.length > 0
               ? artwork.images[0]
               : null,
+          shippingStatus: artwork.shippingStatus || "pending",
+          shippingAddress: artwork.shippingAddress || null,
         };
         return listing;
       });
@@ -114,23 +145,35 @@ const SellerTab = ({ user }: props) => {
     }
   };
 
+  const fetchWonAuctions = async () => {
+    try {
+      const res = await fetchSellerWonAuctions();
+      setSellerWonAuctions(res.data.sellerWonAuctions);
+      console.log(res.data.sellerWonAuctions);
+    } catch (err) {
+      error("Error", "Failed to load won auctions");
+    }
+  };
+
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const res = await getSellerStatus();
         setStatus(res?.data?.status || "none");
-        // console.log(status)
       } catch (err) {
         console.error("Failed to get seller status", err);
         error("Error", "Failed to fetch seller status");
       }
     };
-    // console.log(user,'----')
+
     if (user?.isSeller) {
       fetchStatus();
       fetchArtworks();
+      if (status === "approved") {
+        fetchWonAuctions();
+      }
     }
-  }, [user]);
+  }, [user, status]);
 
   const formik = useFormik({
     initialValues: {
@@ -187,7 +230,7 @@ const SellerTab = ({ user }: props) => {
             const duration =
               new Date(auctionEndTime).getTime() -
               new Date(auctionStartTime).getTime();
-            return duration >= 3600000; // 1 hour in milliseconds
+            return duration >= 3600000; // ----- min 1 hour
           }
         ),
     }),
@@ -214,7 +257,26 @@ const SellerTab = ({ user }: props) => {
     },
   });
 
-  const getBadgeStyles = (status: Listing["status"]) => {
+  const handleMarkAsShipped = async (artworkId: string) => {
+    setLoading(true);
+    try {
+      const res = await markAsShipped(artworkId);
+      if (res.status === 200) {
+        success("Shipping Updated", "Artwork marked as shipped.");
+        await fetchWonAuctions();
+        await fetchArtworks();
+      }
+    } catch (err) {
+      error("Error", "Failed to mark artwork as shipped");
+      console.error("Mark as shipped error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBadgeStyles = (
+    status: Listing["status"] | Listing["shippingStatus"]
+  ) => {
     switch (status) {
       case "active":
         return "bg-emerald-100 text-emerald-600 border-emerald-200";
@@ -224,26 +286,83 @@ const SellerTab = ({ user }: props) => {
         return "bg-red-100 text-red-600 border-red-200";
       case "approved":
         return "bg-blue-100 text-blue-600 border-blue-200";
+      case "shipped":
+        return "bg-green-100 text-green-600 border-green-200";
       default:
         return "bg-gray-100 text-gray-600 border-gray-200";
     }
+  };
+
+  const formatAddress = (address: IWonAuction["address"]): string => {
+    if (!address) return "N/A";
+    const { address: street, place, district, state, pincode } = address;
+    return (
+      [street, place, district, state, pincode?.toString()]
+        .filter(Boolean)
+        .join(", ") || "N/A"
+    );
+  };
+
+  const formatDimensions = (dimensions: object): string | null => {
+    if (!dimensions) return null;
+    const { height, width } = dimensions as any;
+    if (height && width) {
+      return `${height} x ${width} cm`;
+    }
+    return null;
   };
 
   const statusSections = [
     { value: "pending", label: "Pending" },
     { value: "rejected", label: "Rejected" },
     { value: "active", label: "Active" },
+    { value: "finished", label: "Finished" },
   ];
 
-  const filteredListings = listings.filter((listing) => {
-    if (selectedStatus === "pending") return listing.status === "pending";
-    if (selectedStatus === "rejected") return listing.status === "rejected";
-    if (selectedStatus === "active")
-      return listing.status === "approved" ;
-    return false;
-  });
+  const filteredListings = (() => {
+    if (selectedStatus === "pending") {
+      return listings.filter((listing) => listing.status === "pending");
+    }
+    if (selectedStatus === "rejected") {
+      return listings.filter((listing) => listing.status === "rejected");
+    }
+    if (selectedStatus === "active") {
+      return listings.filter(
+        (listing) => listing.status === "approved" && !listing.isEnded
+      );
+    }
+    if (selectedStatus === "finished") {
+      return sellerWonAuctions.map((auction: IWonAuction) => {
+        return {
+          id: auction.artworkId,
+          title: auction.title || "Untitled",
+          status: auction.status,
+          price: Number(auction.price) || auction.amount,
+          listedDate: auction.listedAt
+            ? new Date(auction.listedAt).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : null,
+          highestBid: Number(auction.highestBid) || auction.amount,
+          auctionStartTime: auction.auctionStartTime || null,
+          auctionEndTime: auction.auctionEndTime || null,
+          description: auction.description || null,
+          medium: auction.medium || null,
+          dimensions: formatDimensions(auction.dimensions),
+          yearCreated: Number(auction.yearCreated) || null,
+          category: auction.category || null,
+          imageUrl: auction.image || null,
+          shippingStatus: (auction.status as "pending" | "shipped") || "pending",
+          shippingAddress: formatAddress(auction.address),
+        } as Listing;
+      });
+    }
+    return [];
+  })();
 
-  useEffect(() => {}, [selectedStatus, listings]);
+  useEffect(() => {}, [selectedStatus, listings, sellerWonAuctions]);
 
   return (
     <TabsContent value="seller-dashboard">
@@ -483,7 +602,7 @@ const SellerTab = ({ user }: props) => {
                     <p className="text-4xl font-bold text-[#D6A85F]">
                       {
                         listings.filter(
-                          (l) => l.status === "approved" && l.isActive
+                          (l) => l.status === "approved" && l.isActive && !l.isEnded
                         ).length
                       }
                     </p>
@@ -494,7 +613,12 @@ const SellerTab = ({ user }: props) => {
                     <h3 className="text-lg font-serif font-semibold text-gray-700 mb-2">
                       Total Sales
                     </h3>
-                    <p className="text-4xl font-bold text-[#D6A85F]">$12,450</p>
+                    <p className="text-4xl font-bold text-[#D6A85F]">
+                      ₹
+                      {sellerWonAuctions
+                        .reduce((sum, auction) => sum + Number(auction.amount), 0)
+                        .toLocaleString()}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card className="border-[#D6A85F]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
@@ -502,7 +626,17 @@ const SellerTab = ({ user }: props) => {
                     <h3 className="text-lg font-serif font-semibold text-gray-700 mb-2">
                       Avg. Sale Price
                     </h3>
-                    <p className="text-4xl font-bold text-[#D6A85F]">$1,037</p>
+                    <p className="text-4xl font-bold text-[#D6A85F]">
+                      ₹
+                      {sellerWonAuctions.length
+                        ? Math.round(
+                            sellerWonAuctions.reduce(
+                              (sum, auction) => sum + Number(auction.amount),
+                              0
+                            ) / sellerWonAuctions.length
+                          ).toLocaleString()
+                        : "0"}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -533,13 +667,15 @@ const SellerTab = ({ user }: props) => {
                 ) : (
                   <div className="space-y-4">
                     {filteredListings.map((listing) => {
-                      const hasDetails =
+                      const hasDetails = !!(
                         listing.description ||
                         listing.medium ||
                         listing.dimensions ||
                         listing.yearCreated != null ||
                         listing.category ||
-                        listing.imageUrl;
+                        listing.imageUrl ||
+                        listing.shippingAddress
+                      );
 
                       return (
                         <div
@@ -554,51 +690,44 @@ const SellerTab = ({ user }: props) => {
                               <p className="text-gray-600">
                                 Listed on {listing.listedDate || "N/A"}
                               </p>
-                              {listing.auctionStartTime &&
-                                listing.auctionEndTime && (
-                                  <p className="text-gray-600 text-sm">
-                                    Auction:{" "}
-                                    {new Date(
-                                      listing.auctionStartTime
-                                    ).toLocaleString()}{" "}
-                                    -{" "}
-                                    {new Date(
-                                      listing.auctionEndTime
-                                    ).toLocaleString()}
-                                  </p>
-                                )}
+                              {listing.auctionStartTime && listing.auctionEndTime && (
+                                <p className="text-gray-600 text-sm">
+                                  Auction:{" "}
+                                  {new Date(listing.auctionStartTime).toLocaleString()} -{" "}
+                                  {new Date(listing.auctionEndTime).toLocaleString()}
+                                </p>
+                              )}
                             </div>
                             <div className="flex items-center space-x-4">
                               <Badge
                                 className={`${
-                                  selectedStatus === "active" &&
-                                  listing.auctionStartTime &&
-                                  listing.auctionEndTime
+                                  selectedStatus === "active"
                                     ? getBadgeStyles("active")
+                                    : selectedStatus === "finished"
+                                    ? getBadgeStyles(listing.shippingStatus || "pending")
                                     : getBadgeStyles(listing.status)
                                 } px-2 py-1 text-sm font-medium`}
                               >
-                                {selectedStatus === "active" &&
-                                listing.auctionStartTime &&
-                                listing.auctionEndTime
+                                {selectedStatus === "active"
                                   ? "Active"
+                                  : selectedStatus === "finished"
+                                  ? listing.shippingStatus
+                                    ? listing.shippingStatus.charAt(0).toUpperCase() +
+                                      listing.shippingStatus.slice(1)
+                                    : "Pending"
                                   : listing.status.charAt(0).toUpperCase() +
                                     listing.status.slice(1)}
                               </Badge>
                               <Button
                                 onClick={() =>
                                   setExpandedListingId(
-                                    expandedListingId === listing.id
-                                      ? null
-                                      : listing.id
+                                    expandedListingId === listing.id ? null : listing.id
                                   )
                                 }
                                 className="bg-[#D6A85F]/10 text-[#D6A85F] hover:bg-[#D6A85F]/20 border border-[#D6A85F] px-4 py-2 text-sm font-medium"
                                 disabled={!hasDetails}
                               >
-                                {expandedListingId === listing.id
-                                  ? "Hide Details"
-                                  : "View Details"}
+                                {expandedListingId === listing.id ? "Hide Details" : "View Details"}
                               </Button>
                             </div>
                           </div>
@@ -609,15 +738,14 @@ const SellerTab = ({ user }: props) => {
                                 ₹{listing.price.toLocaleString()}
                               </span>
                             </span>
-                            {listing.auctionStartTime &&
-                              listing.auctionEndTime && (
-                                <span className="text-gray-600 font-medium">
-                                  Current Bid:{" "}
-                                  <span className="text-green-600 font-bold">
-                                    ₹{listing.highestBid.toLocaleString()}
-                                  </span>
+                            {listing.highestBid > 0 && (
+                              <span className="text-gray-600 font-medium">
+                                Final Bid:{" "}
+                                <span className="text-green-600 font-bold">
+                                  ₹{listing.highestBid.toLocaleString()}
                                 </span>
-                              )}
+                              </span>
+                            )}
                             {selectedStatus === "active" &&
                               listing.status === "approved" &&
                               !listing.auctionStartTime &&
@@ -625,19 +753,36 @@ const SellerTab = ({ user }: props) => {
                                 <Button
                                   onClick={() =>
                                     setSelectedArtworkId(
-                                      selectedArtworkId === listing.id
-                                        ? null
-                                        : listing.id
+                                      selectedArtworkId === listing.id ? null : listing.id
                                     )
                                   }
                                   className="bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F] px-4 py-2 text-sm font-medium shadow-md hover:shadow-lg transition-all duration-200"
                                 >
-                                  {selectedArtworkId === listing.id
-                                    ? "Cancel"
-                                    : "Schedule Auction"}
+                                  {selectedArtworkId === listing.id ? "Cancel" : "Schedule Auction"}
+                                </Button>
+                              )}
+                            {selectedStatus === "finished" &&
+                              listing.shippingStatus === "pending" && (
+                                <Button
+                                  onClick={() => handleMarkAsShipped(listing.id)}
+                                  disabled={!listing.shippingAddress || loading}
+                                  className={`px-4 py-2 text-sm font-medium shadow-md transition-all duration-200 ${
+                                    listing.shippingAddress
+                                      ? "bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F]"
+                                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  }`}
+                                >
+                                  {loading ? "Processing..." : "Mark as Shipped"}
                                 </Button>
                               )}
                           </div>
+                          {selectedStatus === "finished" &&
+                            listing.shippingStatus === "pending" &&
+                            !listing.shippingAddress && (
+                              <p className="text-red-500 text-sm mb-4">
+                                Waiting for winner to provide shipping address.
+                              </p>
+                            )}
                           {expandedListingId === listing.id && (
                             <div className="bg-amber-50/50 p-4 rounded-lg border border-[#D6A85F]/20">
                               <h4 className="font-serif text-lg font-semibold text-gray-800 mb-3">
@@ -649,46 +794,54 @@ const SellerTab = ({ user }: props) => {
                                   alt={listing.title}
                                   className="w-full max-w-[200px] h-auto rounded-lg mb-4"
                                   onError={(e) => {
-                                    e.currentTarget.src =
-                                      "/placeholder-image.jpg";
+                                    e.currentTarget.src = "/placeholder-image.jpg";
                                   }}
                                 />
                               ) : (
-                                <p className="text-gray-600 mb-4 text-sm">
-                                  No image available
-                                </p>
+                                <p className="text-gray-600 mb-4 text-sm">No image available</p>
                               )}
                               <p className="text-gray-600 mb-2">
-                                <span className="font-medium">
-                                  Description:
-                                </span>{" "}
-                                {listing.description ||
-                                  "No description available"}
+                                <span className="font-medium">Description:</span>{" "}
+                                {listing.description || "No description available"}
                               </p>
                               <p className="text-gray-600 mb-2">
-                                <span className="font-medium">Medium:</span>{" "}
-                                {listing.medium || "N/A"}
+                                <span className="font-medium">Medium:</span> {listing.medium || "N/A"}
                               </p>
                               <p className="text-gray-600 mb-2">
                                 <span className="font-medium">Dimensions:</span>{" "}
                                 {listing.dimensions || "N/A"}
                               </p>
                               <p className="text-gray-600 mb-2">
-                                <span className="font-medium">
-                                  Year Created:
-                                </span>{" "}
-                                {listing.yearCreated != null
-                                  ? listing.yearCreated
-                                  : "N/A"}
+                                <span className="font-medium">Year Created:</span>{" "}
+                                {listing.yearCreated != null ? listing.yearCreated : "N/A"}
                               </p>
-                              <p className="text-gray-600">
+                              <p className="text-gray-600 mb-2">
                                 <span className="font-medium">Category:</span>{" "}
                                 {listing.category || "N/A"}
                               </p>
+                              {selectedStatus === "finished" && listing.shippingAddress && (
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Shipping Address:</span>{" "}
+                                  {listing.shippingAddress}
+                                </p>
+                              )}
+                              {selectedStatus === "finished" && (
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Receipt:</span>{" "}
+                                  <a
+                                    href={(listing as any).receipt}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#D6A85F] underline hover:text-[#C19A56]"
+                                  >
+                                    View Receipt
+                                  </a>
+                                </p>
+                              )}
                             </div>
                           )}
-                          {
-                       listing.status === "approved" &&
+                          {selectedStatus === "active" &&
+                            listing.status === "approved" &&
                             !listing.auctionStartTime &&
                             !listing.auctionEndTime &&
                             selectedArtworkId === listing.id && (
@@ -706,9 +859,7 @@ const SellerTab = ({ user }: props) => {
                                   <input
                                     type="datetime-local"
                                     name="auctionStartTime"
-                                    value={
-                                      auctionFormik.values.auctionStartTime
-                                    }
+                                    value={auctionFormik.values.auctionStartTime}
                                     onChange={auctionFormik.handleChange}
                                     onBlur={auctionFormik.handleBlur}
                                     className="w-full border-2 border-[#D6A85F]/30 rounded-lg px-4 py-3 focus:border-[#D6A85F] focus:ring-[#D6A85F]/20 bg-white"
@@ -745,9 +896,7 @@ const SellerTab = ({ user }: props) => {
                                     disabled={loading}
                                     className="flex-1 bg-gradient-to-r from-[#D6A85F] to-[#E8B866] hover:from-[#C19A56] hover:to-[#D6A85F] py-3 font-medium shadow-md hover:shadow-lg transition-all duration-200"
                                   >
-                                    {loading
-                                      ? "Scheduling..."
-                                      : "Schedule Auction"}
+                                    {loading ? "Scheduling..." : "Schedule Auction"}
                                   </Button>
                                   <Button
                                     variant="outline"

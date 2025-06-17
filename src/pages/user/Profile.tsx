@@ -1,8 +1,9 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BidTab from "@/components/user/BidTab";
 import ProfileTab from "@/components/user/ProfileTab";
 import SellerTab from "@/components/user/SellerTab";
 import WalletTab from "@/components/user/WalletTab";
+import WonAuctionsTab from "@/components/user/WonAuctions";
 import useToast from "@/hooks/useToast";
 import { getUserDetails } from "@/services/userService";
 import { useEffect, useState } from "react";
@@ -107,6 +108,8 @@ export default function Profile() {
             <BidTab />
 
             <WalletTab />
+
+            <WonAuctionsTab />
           </Tabs>
         </div>
       </div>

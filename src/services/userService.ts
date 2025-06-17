@@ -178,3 +178,43 @@ export const getBids = async () => {
     throw error || "failed to get bids";
   }
 };
+
+export const getWonAuctions = async () => {
+  try {
+    const response = await userApi.get("/users/getWonAuctions");
+    return response;
+  } catch (error) {
+    throw error || "failed to get won auctions";
+  }
+};
+
+export const updateAddress = async (auctionId: string, address: object) => {
+  try {
+    const response = await userApi.put(`/users/updateAddress/${auctionId}`, {
+      address,
+    });
+    return response;
+  } catch (error) {
+    throw error || "failed to update address";
+  }
+};
+
+export const fetchSellerWonAuctions = async () => {
+  try {
+    const response = await userApi.get("/users/sellerWonAuctions");
+    return response;
+  } catch (error) {
+    throw error || "failed to get won";
+  }
+};
+
+export const markAsShipped = async (artworkId: string) => {
+  try {
+    const response = await userApi.put(
+      `/users/updateShippingStatus/${artworkId}`
+    );
+    return response;
+  } catch (error) {
+    throw error || "failed to update status";
+  }
+};

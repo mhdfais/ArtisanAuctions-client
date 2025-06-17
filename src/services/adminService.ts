@@ -35,3 +35,30 @@ export const reject = async (approvalId: string) => {
     throw error || "failed to reject";
   }
 };
+
+export const fetchArtworks=async()=>{
+  try {
+    const response=await adminApi.get('/admin/getArtworks')
+    return response
+  } catch (error) {
+    throw error||'failed to fetch artworks'
+  }
+}
+
+export const fetchSellers=async()=>{
+  try {
+    const response=await adminApi.get('/admin/getSellers')
+    return response
+  } catch (error) {
+    throw error||'failed to fetch sellers'
+  }
+}
+
+export const fetchUsers=async()=>{
+  try {
+    const response=await adminApi.get('/admin/getUsers')
+    return response
+  } catch (error) {
+    throw error||'failed to fetch users'
+  }
+}
