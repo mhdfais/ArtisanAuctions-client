@@ -70,7 +70,6 @@ const UserRoutes = (
     }
   />
   
-  {/* Catch-all route for unknown paths inside the Layout */}
   <Route path="*" element={<NotFound />} />
 </Route>
 
