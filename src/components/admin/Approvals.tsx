@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,6 @@ import {
   Phone,
   MapPin,
   CreditCard,
-  Calendar,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -228,7 +227,7 @@ const AdminApprovals = () => {
     setIsDetailsOpen(true);
   };
 
-  const getStatusBadge = (status: string) => (
+  const getStatusBadge = () => (
     <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
   );
 
@@ -291,7 +290,7 @@ const AdminApprovals = () => {
                         <h3 className="font-semibold text-slate-800 text-lg">{seller.name}</h3>
                         <p className="text-slate-600">{seller.email}</p>
                       </div>
-                      {getStatusBadge(seller.status)}
+                      {getStatusBadge()}
                     </div>
 
                     <div className="space-y-3 mb-6">
@@ -371,7 +370,7 @@ const AdminApprovals = () => {
                         alt={artwork.title}
                         className="w-full h-48 object-cover rounded-t-lg"
                       />
-                      <div className="absolute top-3 right-3">{getStatusBadge(artwork.status)}</div>
+                      <div className="absolute top-3 right-3">{getStatusBadge()}</div>
                     </div>
                     <div className="p-6">
                       <h3 className="font-semibold text-slate-800 text-lg mb-1">{artwork.title}</h3>

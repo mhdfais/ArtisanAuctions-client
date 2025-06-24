@@ -90,7 +90,7 @@ const ArtworkForm = ({ cancel, fetchArtworks }: ArtworkFormProps) => {
         formData.append("description", values.description);
         formData.append("reservePrice", values.reservePrice?.toString() || "0");
 
-        croppedImages.forEach((file, index) => {
+        croppedImages.forEach((file) => {
           formData.append("images", file);
         });
 

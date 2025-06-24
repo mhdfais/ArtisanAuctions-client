@@ -21,7 +21,7 @@ const AdminArtworks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [artworks, setArtworks] = useState<IArtwork[]>([]);
 
-  const { success, error } = useToast();
+  const { error } = useToast();
 
   const getArtworks = async () => {
     try {

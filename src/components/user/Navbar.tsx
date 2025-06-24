@@ -14,7 +14,7 @@ const Navbar: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.isLoggedIn);
   const dispatch = useDispatch();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { error } = useToast();
+  const { error, success } = useToast();
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const toggleDropdown = () => setIsDropdownOpen((prev) => !prev);
@@ -36,6 +36,7 @@ const Navbar: React.FC = () => {
       try {
         await logoutUser();
         dispatch(logout());
+        success("Success", "Logout Successfull.");
         setIsDropdownOpen(false);
       } catch (err) {
         error("Error", "Failed to logout");

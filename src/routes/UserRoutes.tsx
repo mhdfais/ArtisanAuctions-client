@@ -10,6 +10,8 @@ import Profile from "@/pages/user/Profile";
 import Signup from "@/pages/user/Signup";
 import { Route } from "react-router-dom";
 import ArtworkDetails from "@/pages/user/ArtworkDetails";
+import Auctions from "@/pages/user/Auctions";
+import About from "@/pages/user/About";
 
 const UserRoutes = (
   <>
@@ -48,8 +50,29 @@ const UserRoutes = (
     />
 
     <Route element={<Layout />}>
-      <Route path="/" element={<Home />} />
-    </Route>
+  <Route path="/" element={<Home />} />
+  <Route path="/auctions" element={<Auctions />} />
+  <Route path="/about" element={<About />} />
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/artwork/:id"
+    element={
+      <ProtectedRoute>
+        <ArtworkDetails />
+      </ProtectedRoute>
+    }
+  />
+  
+  {/* Catch-all route for unknown paths inside the Layout */}
+  <Route path="*" element={<NotFound />} />
+</Route>
 
     {/* Protected Routes */}
     <Route element={<Layout />}>
@@ -69,6 +92,15 @@ const UserRoutes = (
           </ProtectedRoute>
         }
       />
+
+      {/* <Route
+      path="/auctions"
+      element={
+        <ProtectedRoute>
+          <Auctions />
+        </ProtectedRoute>
+      }
+       /> */}
     </Route>
     {/* <Route path="*" element={<NotFound />} /> */}
   </>

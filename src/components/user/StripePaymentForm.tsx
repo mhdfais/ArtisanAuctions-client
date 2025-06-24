@@ -9,7 +9,7 @@ const PaymentForm = ({ clientSecret, onSuccess }: { clientSecret: string; onSucc
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const { error, success } = useToast();
+  const { error } = useToast();
 
   useEffect(() => {
     setPaymentCompleted(false); // Reset when clientSecret changes

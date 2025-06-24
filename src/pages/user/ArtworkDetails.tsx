@@ -12,8 +12,6 @@ import {
   Heart,
   Share2,
   Clock,
-  Eye,
-  Users,
   ZoomIn,
   History,
   Palette,
@@ -72,7 +70,6 @@ const ArtworkDetails = () => {
   const [isBidding, setIsBidding] = useState(false);
   const { error, success } = useToast();
 
-  // Get user data from Redux
   const { isLoggedIn, user } = useSelector((state: RootState) => state.auth);
   const email = user?.email || "";
   // const userName = user?.name || "";

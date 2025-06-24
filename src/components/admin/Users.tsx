@@ -24,7 +24,7 @@ const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState<IUser[]>([]);
 
-  const { success, error } = useToast();
+  const { error } = useToast();
 
   const getUsers = async () => {
     try {

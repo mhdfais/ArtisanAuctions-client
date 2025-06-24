@@ -38,7 +38,7 @@ const AdminSellers = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [sellers, setSellers] = useState<ISeller[]>([]);
 
-  const { error, success } = useToast();
+  const { error } = useToast();
 
   const getSellers = async () => {
     try {

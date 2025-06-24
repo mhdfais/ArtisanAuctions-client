@@ -23,7 +23,6 @@ export default function Profile() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("profile");
   const [user, setUser] = useState<userDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const { error } = useToast();
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      setLoading(true);
+      // setLoading(true);
       try {
         const userDetails = await getUserDetails();
         setUser(userDetails.data.user);
@@ -42,7 +41,7 @@ export default function Profile() {
       } catch (err) {
         error("Error", "Failed to fetch user details");
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     };
 

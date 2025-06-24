@@ -56,7 +56,7 @@ const Home = () => {
             <div className="w-20 h-1 bg-gradient-to-r from-[#D6A85F] to-[#B8956A] rounded-full"></div>
           </div>
           <a
-            href="#"
+            href="/auctions"
             className="text-[#D6A85F] hover:text-[#B8956A] font-medium transition-colors duration-200 relative group"
           >
             View All
@@ -69,13 +69,15 @@ const Home = () => {
           <ArtworkCard />
           <ArtworkCard /> */}
           {artworks.length > 0 ? (
-            artworks.map((artwork) => (
-              <ArtworkCard
-                key={artwork._id}
-                details={artwork}
-                onClick={() => navigate(`/artwork/${artwork._id}`)}
-              />
-            ))
+            artworks
+              .slice(0, 6)
+              .map((artwork) => (
+                <ArtworkCard
+                  key={artwork._id}
+                  details={artwork}
+                  onClick={() => navigate(`/artwork/${artwork._id}`)}
+                />
+              ))
           ) : (
             <p>not artworks found</p>
           )}

@@ -26,7 +26,7 @@ const OtpModal: React.FC<OtpModalProps> = ({
   onSubmit,
   onResentOtp,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120); // 2 minutes in seconds
   const { error } = useToast();
@@ -126,7 +126,7 @@ const OtpModal: React.FC<OtpModalProps> = ({
                   placeholder="Enter OTP"
                   className="w-full border-b-2 border-gray-300 focus:ring-0 focus:outline-none focus:border-b-2 focus:border-[#D6A85F] focus:bg-gray-50 h-9 px-2 text-sm transition-all duration-200 p-2 "
                   maxLength={6}
-                  disabled={timeLeft === 0 || isLoading}
+                  disabled={timeLeft === 0}
                 />
               </div>
               <button

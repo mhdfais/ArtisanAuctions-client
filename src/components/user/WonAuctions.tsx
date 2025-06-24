@@ -8,12 +8,10 @@ import {
   DollarSign,
   Package,
   Eye,
-  CreditCard,
   Truck,
   CheckCircle,
   Clock,
   Calendar,
-  IndianRupee,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useToast from "@/hooks/useToast";

@@ -9,10 +9,6 @@ import {
   resetPassword,
   verifyOtp,
 } from "../../services/authService";
-import {
-  OtpInitialValues,
-  otpValidationSchema,
-} from "../../utils/validations/otpValidator";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
